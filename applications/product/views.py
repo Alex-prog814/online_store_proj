@@ -1,8 +1,12 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, filters
+from rest_framework import generics, filters, status
 from django_filters import rest_framework
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from applications.account.models import Profile
 from applications.product.models import Product
 from applications.product.serializers import ProductSerializer
 
@@ -39,4 +43,24 @@ class ProductListView(generics.ListAPIView):
 class ProductDetailView(generics.RetrieveAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+
+class FavoriteView(APIView):
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request, pk):
+        profile = Profile.objects.get(user=request.user.id)
+        if profile.favorite.filter(id=pk).exists():
+            profile.favorite.set(profile.favorite.exclude(id=pk))
+            msg = 'Product was deleted from favorites!'
+        else:
+            profile.favorite.add(pk)
+            profile.save()
+            msg = 'Product added to favorite successfully!'
+        return Response(msg, status=status.HTTP_200_OK)
+
+
+
+
+
 
